@@ -1,0 +1,4 @@
+# Ignore ssh config tests
+sshd_config
+# Ignore generic crypto usage
+crypto_usage.py

@@ -16,6 +16,7 @@ from pq_risk_scanner.analysis.risk_classifier import classify_findings
 from pq_risk_scanner.quantum import enrich_batch
 from pq_risk_scanner.reporting.console_reporter import print_results
 from pq_risk_scanner.reporting.markdown_reporter import generate_report
+from pq_risk_scanner.reporting.json_reporter import generate_json_report
 from pq_risk_scanner.scanners import scan_path
 
 
@@ -29,7 +30,7 @@ def cli() -> None:
 @click.argument("target", type=click.Path(exists=True))
 @click.option(
     "--output-format",
-    type=click.Choice(["console", "markdown"], case_sensitive=False),
+    type=click.Choice(["console", "markdown", "json"], case_sensitive=False),
     default="console",
     help="Output format (default: console).",
 )
@@ -72,6 +73,14 @@ def scan(
         out = Path(output_file) if output_file else Path("report.md")
         generate_report(results, output_path=out)
         click.echo(f"Report written to {out}")
+    elif output_format == "json":
+        if output_file:
+            out = Path(output_file)
+            generate_json_report(results, output_path=out)
+            click.echo(f"JSON report written to {out}")
+        else:
+            json_out = generate_json_report(results)
+            click.echo(json_out)
     else:
         print_results(results, verbose=verbose)
 

@@ -215,6 +215,48 @@ _ALGORITHM_DB: Dict[str, AlgorithmProfile] = {
         effective_pq_bits=64,
         notes="Broken classically; Grover's further weakens it.",
     ),
+    # ── Legacy / Broken Symmetric Ciphers ───────────────────────────────
+    "des": AlgorithmProfile(
+        canonical_name="DES",
+        family=AlgorithmFamily.SYMMETRIC,
+        risk_category=RiskCategory.QUANTUM_UNSAFE,
+        vulnerable_to="grover",
+        post_quantum_replacement="AES-256",
+        replacement_standard="NIST SP 800-131A",
+        effective_pq_bits=28,
+        notes="56-bit key; broken classically since 1998. Grover's halves to ~28 bits. Avoid entirely.",
+    ),
+    "rc4": AlgorithmProfile(
+        canonical_name="RC4",
+        family=AlgorithmFamily.SYMMETRIC,
+        risk_category=RiskCategory.QUANTUM_UNSAFE,
+        vulnerable_to="grover",
+        post_quantum_replacement="AES-256 with GCM",
+        replacement_standard="NIST SP 800-131A",
+        effective_pq_bits=40,
+        notes="Stream cipher with multiple known biases; prohibited by RFC 7465. Grover's further weakens key search.",
+    ),
+    # ── Hash Functions (continued) ───────────────────────────────────────
+    "blake2b": AlgorithmProfile(
+        canonical_name="BLAKE2b",
+        family=AlgorithmFamily.HASH,
+        risk_category=RiskCategory.QUANTUM_SAFE,
+        vulnerable_to="grover",
+        post_quantum_replacement=None,
+        replacement_standard=None,
+        effective_pq_bits=128,
+        notes="256-bit output variant; Grover's reduces collision resistance to 128 bits; quantum-safe.",
+    ),
+    "blake3": AlgorithmProfile(
+        canonical_name="BLAKE3",
+        family=AlgorithmFamily.HASH,
+        risk_category=RiskCategory.QUANTUM_SAFE,
+        vulnerable_to="grover",
+        post_quantum_replacement=None,
+        replacement_standard=None,
+        effective_pq_bits=128,
+        notes="256-bit output; successor to BLAKE2. Grover's reduces to 128 bits; quantum-safe.",
+    ),
     # ── Post-Quantum Algorithms (quantum-safe) ──────────────────────────
     "ml-kem": AlgorithmProfile(
         canonical_name="ML-KEM (Kyber)",
@@ -245,6 +287,16 @@ _ALGORITHM_DB: Dict[str, AlgorithmProfile] = {
         replacement_standard="NIST FIPS 205",
         effective_pq_bits=128,
         notes="Hash-based post-quantum signature; NIST-standardized.",
+    ),
+    "fn-dsa": AlgorithmProfile(
+        canonical_name="FN-DSA (FALCON)",
+        family=AlgorithmFamily.SIGNATURE,
+        risk_category=RiskCategory.QUANTUM_SAFE,
+        vulnerable_to="none",
+        post_quantum_replacement=None,
+        replacement_standard="NIST FIPS 206",
+        effective_pq_bits=128,
+        notes="Lattice-based post-quantum signature based on NTRU. NIST FIPS 206 standardized.",
     ),
 }
 
@@ -307,6 +359,14 @@ _ALIASES: Dict[str, str] = {
     "dilithium": "ml-dsa",
     "sphincs+": "slh-dsa",
     "sphincs": "slh-dsa",
+    "falcon": "fn-dsa",
+    "falcon-512": "fn-dsa",
+    "falcon-1024": "fn-dsa",
+    "blake2": "blake2b",
+    "rc4": "rc4",
+    "arcfour": "rc4",
+    "des-cbc": "des",
+    "des-ecb": "des",
 }
 
 

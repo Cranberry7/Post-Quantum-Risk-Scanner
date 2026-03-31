@@ -7,17 +7,26 @@ Wires all pipeline layers together:
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 import click
 
 from pq_risk_scanner.analysis.migration_advisor import advise_batch
 from pq_risk_scanner.analysis.risk_classifier import classify_findings
+from pq_risk_scanner.models import RiskCategory
 from pq_risk_scanner.quantum import enrich_batch
 from pq_risk_scanner.reporting.console_reporter import print_results
 from pq_risk_scanner.reporting.markdown_reporter import generate_report
 from pq_risk_scanner.reporting.json_reporter import generate_json_report
 from pq_risk_scanner.scanners import scan_path
+
+
+_RISK_LABELS = {
+    "quantum-unsafe": RiskCategory.QUANTUM_UNSAFE,
+    "quantum-weakened": RiskCategory.QUANTUM_WEAKENED,
+    "quantum-safe": RiskCategory.QUANTUM_SAFE,
+}
 
 
 @click.group()
@@ -42,12 +51,20 @@ def cli() -> None:
 )
 @click.option("--verbose", "-v", is_flag=True, help="Show detailed quantum explanations.")
 @click.option("--no-recursive", is_flag=True, help="Don't recurse into subdirectories.")
+@click.option(
+    "--filter",
+    "risk_filter",
+    type=click.Choice(["quantum-unsafe", "quantum-weakened", "quantum-safe"], case_sensitive=False),
+    default=None,
+    help="Only show findings matching this risk category.",
+)
 def scan(
     target: str,
     output_format: str,
     output_file: str | None,
     verbose: bool,
     no_recursive: bool,
+    risk_filter: str | None,
 ) -> None:
     """Scan TARGET (file or directory) for cryptographic primitives."""
     target_path = Path(target)
@@ -68,6 +85,14 @@ def scan(
     # ── Stage 4: Migration Guidance ───────────────────────────────────
     results = advise_batch(results)
 
+    # ── Stage 4.5: Filter (optional) ──────────────────────────────────
+    if risk_filter:
+        category = _RISK_LABELS[risk_filter.lower()]
+        results = [r for r in results if r.risk_category == category]
+        if not results:
+            click.echo(f"No findings matching filter: {risk_filter}")
+            return
+
     # ── Stage 5: Report ───────────────────────────────────────────────
     if output_format == "markdown":
         out = Path(output_file) if output_file else Path("report.md")
@@ -83,6 +108,29 @@ def scan(
             click.echo(json_out)
     else:
         print_results(results, verbose=verbose)
+        _print_summary(results)
+
+
+def _print_summary(results: list) -> None:
+    """Print a concise risk summary after the main console output."""
+    counts: Counter = Counter(r.risk_category.value for r in results)
+    total = len(results)
+    unsafe = counts.get(RiskCategory.QUANTUM_UNSAFE.value, 0)
+    weakened = counts.get(RiskCategory.QUANTUM_WEAKENED.value, 0)
+    safe = counts.get(RiskCategory.QUANTUM_SAFE.value, 0)
+    unknown = counts.get(RiskCategory.UNKNOWN.value, 0)
+
+    click.echo("")
+    click.echo("═" * 50)
+    click.echo(" SCAN SUMMARY")
+    click.echo("═" * 50)
+    click.echo(f" Total findings : {total}")
+    click.echo(f" ❌ Quantum-Unsafe    : {unsafe}")
+    click.echo(f" ⚠️  Quantum-Weakened  : {weakened}")
+    click.echo(f" ✅ Quantum-Safe      : {safe}")
+    if unknown:
+        click.echo(f" ❓ Unknown           : {unknown}")
+    click.echo("═" * 50)
 
 
 if __name__ == "__main__":
